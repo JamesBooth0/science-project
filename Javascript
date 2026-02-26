@@ -1,2 +1,0 @@
-// adding js file broke the website, removing extension
-// restarting website
