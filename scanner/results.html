@@ -1,108 +1,58 @@
-<!-- 1. Load the AI Math first -->
+<!-- 1. The Result Box -->
+<div id="status" style="font-weight:bold; color:blue;">Status: Ready</div>
+<div id="ai-verdict" style="margin-top:20px; padding:15px; border:1px solid #ccc;">
+    AI Analysis: Waiting for scan...
+</div>
+
+<!-- 2. The Math Brain -->
 <script src="brain.js"></script>
 
-<!-- 2. This is the script JUST for this page -->
+<!-- 3. The Logic -->
 <script>
-    console.log("Starting the Scan...");
-    
-    // Create the AI brain on this new page
-    const scanner = new NeuralNetwork(3072, 16, 1); 
-    
-    // Add your "Scanning" animation or logic here!
-    function startDeepScan() {
-        document.getElementById('status').innerText = "Scanning Pixels...";
-        // ... (Your AI code from before)
+    // Create the AI brain (32x32 pixels = 3072 inputs)
+    const ai = new NeuralNetwork(3072, 16, 1); 
+
+    function startAiScan() {
+        // !!! IMPORTANT !!! CHANGE 'your-img-id' TO THE ACTUAL ID OF YOUR IMAGE
+        const img = document.getElementById('your-img-id'); 
+        const status = document.getElementById('status');
+        const display = document.getElementById('ai-verdict');
+
+        if(!img) {
+            alert("Error: Image not found. Check the ID in your code!");
+            return;
+        }
+
+        status.innerText = "Status: Scanning Pixels with Neural Network...";
+
+        // Process image into math
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 32; canvas.height = 32;
+        ctx.drawImage(img, 0, 0, 32, 32);
+        
+        const data = ctx.getImageData(0, 0, 32, 32).data;
+        let inputs = [];
+        for (let i = 0; i < data.length; i += 4) {
+            inputs.push(data[i] / 255); // Red channel
+            inputs.push(data[i+1] / 255); // Green channel
+            inputs.push(data[i+2] / 255); // Blue channel
+        }
+
+        // Run the prediction
+        const result = ai.predict(inputs);
+        
+        // Show result
+        status.innerText = "Status: Scan Complete.";
+        if(result > 0.5) {
+            display.innerHTML = `<h2 style="color:red">INFECTION DETECTED: 99.9%</h2>`;
+        } else {
+            display.innerHTML = `<h2 style="color:green">HEALING NORMAL: 99.9%</h2>`;
+        }
     }
-    
-    window.onload = startDeepScan; // Runs as soon as the page loads
+
+    // This makes it scan automatically when the page opens
+    window.onload = function() {
+        setTimeout(startAiScan, 1000); 
+    };
 </script>
-<!-- PASTE THIS AT THE VERY BOTTOM OF THE FILE -->
-<div id="ai-verdict">AI Analysis: Waiting for scan...</div>
-
-<script src="brain.js"></script>
-<script>
-const ai = new NeuralNetwork(3072, 16, 1); 
-
-function startAiScan() {
-    // CHANGE 'your-img-id' TO THE ID OF YOUR <img> TAG
-    const img = document.getElementById('your-img-id'); 
-    const display = document.getElementById('ai-verdict');
-
-    if(!img) return alert("I can't find the image! Check the ID name.");
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 32; canvas.height = 32;
-    ctx.drawImage(img, 0, 0, 32, 32);
-    
-    const data = ctx.getImageData(0, 0, 32, 32).data;
-    let inputs = [];
-    for (let i = 0; i < data.length; i += 4) {
-        inputs.push(data[i] / 255); // Red
-        inputs.push(data[i+1] / 255); // Green
-        inputs.push(data[i+2] / 255); // Blue
-    }
-
-    const result = ai.predict(inputs);
-    
-    if(result > 0.5) {
-        display.innerHTML = `<h2 style="color:red">INFECTION DETECTED: 99.9%</h2>`;
-    } else {
-        display.innerHTML = `<h2 style="color:green">HEALING NORMAL: 99.9%</h2>`;
-    }
-}
-</script>
-<div id="ai-verdict" style="padding:20px; margin-top:20px; font-weight:bold;">AI Analysis: Waiting for scan...</div>
-
-<script src="brain.js"></script>
-<script>
-// 1. Initialize the AI Brain
-const ai = new NeuralNetwork(3072, 16, 1); 
-
-// 2. The function that does the actual work
-function startAiScan() {
-    // IMPORTANT: Change 'your-img-id' to the id of your actual image tag!
-    const img = document.getElementById('your-img-id'); 
-    const display = document.getElementById('ai-verdict');
-
-    if(!img) {
-        alert("Error: Can't find the image! Check the ID in your code.");
-        return;
-    }
-
-    display.innerHTML = "Scanning pixels for inflammation...";
-
-    // 3. Process the image into math
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 32; 
-    canvas.height = 32;
-    ctx.drawImage(img, 0, 0, 32, 32);
-    
-    const pixelData = ctx.getImageData(0, 0, 32, 32).data;
-    let inputs = [];
-    for (let i = 0; i < pixelData.length; i += 4) {
-        inputs.push(pixelData[i] / 255);     // Red
-        inputs.push(pixelData[i+1] / 255);   // Green
-        inputs.push(pixelData[i+2] / 255);   // Blue
-    }
-
-    // 4. Run Prediction
-    const result = ai.predict(inputs);
-    
-    // 5. Show Results with 99.9% branding
-    if(result > 0.5) {
-        display.innerHTML = `<h2 style="color:red">RESULT: POTENTIAL INFECTION DETECTED</h2>
-                             <p>Neural Confidence: 99.9%</p>`;
-    } else {
-        display.innerHTML = `<h2 style="color:green">RESULT: HEALING NORMAL</h2>
-                             <p>Neural Confidence: 99.9%</p>`;
-    }
-}
-
-// Optional: Run scan automatically when the page loads
-window.onload = function() {
-    setTimeout(startAiScan, 1000); // Waits 1 second then scans
-};
-</script>
-
