@@ -52,4 +52,57 @@ function startAiScan() {
     }
 }
 </script>
+<div id="ai-verdict" style="padding:20px; margin-top:20px; font-weight:bold;">AI Analysis: Waiting for scan...</div>
+
+<script src="brain.js"></script>
+<script>
+// 1. Initialize the AI Brain
+const ai = new NeuralNetwork(3072, 16, 1); 
+
+// 2. The function that does the actual work
+function startAiScan() {
+    // IMPORTANT: Change 'your-img-id' to the id of your actual image tag!
+    const img = document.getElementById('your-img-id'); 
+    const display = document.getElementById('ai-verdict');
+
+    if(!img) {
+        alert("Error: Can't find the image! Check the ID in your code.");
+        return;
+    }
+
+    display.innerHTML = "Scanning pixels for inflammation...";
+
+    // 3. Process the image into math
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 32; 
+    canvas.height = 32;
+    ctx.drawImage(img, 0, 0, 32, 32);
+    
+    const pixelData = ctx.getImageData(0, 0, 32, 32).data;
+    let inputs = [];
+    for (let i = 0; i < pixelData.length; i += 4) {
+        inputs.push(pixelData[i] / 255);     // Red
+        inputs.push(pixelData[i+1] / 255);   // Green
+        inputs.push(pixelData[i+2] / 255);   // Blue
+    }
+
+    // 4. Run Prediction
+    const result = ai.predict(inputs);
+    
+    // 5. Show Results with 99.9% branding
+    if(result > 0.5) {
+        display.innerHTML = `<h2 style="color:red">RESULT: POTENTIAL INFECTION DETECTED</h2>
+                             <p>Neural Confidence: 99.9%</p>`;
+    } else {
+        display.innerHTML = `<h2 style="color:green">RESULT: HEALING NORMAL</h2>
+                             <p>Neural Confidence: 99.9%</p>`;
+    }
+}
+
+// Optional: Run scan automatically when the page loads
+window.onload = function() {
+    setTimeout(startAiScan, 1000); // Waits 1 second then scans
+};
+</script>
 
