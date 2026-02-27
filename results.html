@@ -1,0 +1,18 @@
+<!-- 1. Load the AI Math first -->
+<script src="brain.js"></script>
+
+<!-- 2. This is the script JUST for this page -->
+<script>
+    console.log("Starting the Scan...");
+    
+    // Create the AI brain on this new page
+    const scanner = new NeuralNetwork(3072, 16, 1); 
+    
+    // Add your "Scanning" animation or logic here!
+    function startDeepScan() {
+        document.getElementById('status').innerText = "Scanning Pixels...";
+        // ... (Your AI code from before)
+    }
+    
+    window.onload = startDeepScan; // Runs as soon as the page loads
+</script>
