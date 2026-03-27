@@ -1,58 +1,165 @@
-<!-- 1. The Result Box -->
-<div id="status" style="font-weight:bold; color:blue;">Status: Ready</div>
-<div id="ai-verdict" style="margin-top:20px; padding:15px; border:1px solid #ccc;">
-    AI Analysis: Waiting for scan...
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Post-Op Complication Detector</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { font-size: 22px; text-align: center; color: #2c3e50; }
+        .preview-box { width: 100%; height: 300px; background: #eee; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 20px; }
+        img { max-width: 100%; max-height: 100%; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .btn-scan { background: #3498db; color: white; }
+        .btn-train-red { background: #e74c3c; color: white; }
+        .btn-train-green { background: #2ecc71; color: white; }
+        #status-bar { margin-top: 20px; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; }
+        .healthy { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .warning { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Post-Op Wound AI Monitor</h1>
+    
+    <div class="preview-box" id="drop-zone">
+        <img id="wound-img" src="" style="display:none;">
+        <p id="placeholder">Upload or Drag Wound Photo Here</p>
+    </div>
+
+    <div class="controls">
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+        <button onclick="document.getElementById('file-input').click()">Upload Photo</button>
+        <button class="btn-scan" onclick="runInference()">Run AI Scan</button>
+    </div>
+
+    <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+
+    <div class="controls">
+        <small style="width:100%; text-align:center; margin-bottom:5px;">Demo Controls (Train AI):</small>
+        <button class="btn-train-green" onclick="teachAI(0)">Teach: Healthy</button>
+        <button class="btn-train-red" onclick="teachAI(1)">Teach: Complication</button>
+    </div>
+
+    <div id="status-bar" style="display:none;"></div>
 </div>
 
-<!-- 2. The Math Brain -->
-<script src="brain.js"></script>
-
-<!-- 3. The Logic -->
 <script>
-    // Create the AI brain (32x32 pixels = 3072 inputs)
-    const ai = new NeuralNetwork(3072, 16, 1); 
-
-    function startAiScan() {
-        // !!! IMPORTANT !!! CHANGE 'your-img-id' TO THE ACTUAL ID OF YOUR IMAGE
-        const img = document.getElementById('your-img-id'); 
-        const status = document.getElementById('status');
-        const display = document.getElementById('ai-verdict');
-
-        if(!img) {
-            alert("Error: Image not found. Check the ID in your code!");
-            return;
-        }
-
-        status.innerText = "Status: Scanning Pixels with Neural Network...";
-
-        // Process image into math
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 32; canvas.height = 32;
-        ctx.drawImage(img, 0, 0, 32, 32);
+/**
+ * 1. THE BRAIN: Neural Network with Full Backpropagation
+ */
+class NeuralNetwork {
+    constructor(inputs, hidden, outputs) {
+        this.is = inputs; this.hs = hidden; this.os = outputs;
+        this.lr = 0.15; // Learning Rate
         
-        const data = ctx.getImageData(0, 0, 32, 32).data;
-        let inputs = [];
-        for (let i = 0; i < data.length; i += 4) {
-            inputs.push(data[i] / 255); // Red channel
-            inputs.push(data[i+1] / 255); // Green channel
-            inputs.push(data[i+2] / 255); // Blue channel
-        }
-
-        // Run the prediction
-        const result = ai.predict(inputs);
-        
-        // Show result
-        status.innerText = "Status: Scan Complete.";
-        if(result > 0.5) {
-            display.innerHTML = `<h2 style="color:red">INFECTION DETECTED: 99.9%</h2>`;
-        } else {
-            display.innerHTML = `<h2 style="color:green">HEALING NORMAL: 99.9%</h2>`;
-        }
+        // Random Weights (-1 to 1)
+        this.w_ih = Array.from({length: this.hs}, () => Array.from({length: this.is}, () => Math.random() * 2 - 1));
+        this.w_ho = Array.from({length: this.os}, () => Array.from({length: this.hs}, () => Math.random() * 2 - 1));
     }
 
-    // This makes it scan automatically when the page opens
-    window.onload = function() {
-        setTimeout(startAiScan, 1000); 
+    sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+
+    predict(inputArray) {
+        let hidden = this.w_ih.map(row => this.sigmoid(row.reduce((acc, w, i) => acc + w * inputArray[i], 0)));
+        let output = this.w_ho.map(row => this.sigmoid(row.reduce((acc, w, i) => acc + w * hidden[i], 0)));
+        return { output, hidden };
+    }
+
+    train(inputArray, targetArray) {
+        // Feedforward
+        let { output, hidden } = this.predict(inputArray);
+        let outErrors = targetArray.map((t, i) => t - output[i]);
+
+        // Backprop: Hidden -> Output
+        for (let i = 0; i < this.w_ho.length; i++) {
+            let grad = output[i] * (1 - output[i]) * outErrors[i] * this.lr;
+            for (let j = 0; j < this.hs; j++) this.w_ho[i][j] += grad * hidden[j];
+        }
+
+        // Backprop: Input -> Hidden
+        let hidErrors = new Array(this.hs).fill(0);
+        for (let i = 0; i < this.os; i++) {
+            for (let j = 0; j < this.hs; j++) hidErrors[j] += outErrors[i] * this.w_ho[i][j];
+        }
+        for (let i = 0; i < this.hs; i++) {
+            let grad = hidden[i] * (1 - hidden[i]) * hidErrors[i] * this.lr;
+            for (let j = 0; j < this.is; j++) this.w_ih[i][j] += grad * inputArray[j];
+        }
+    }
+}
+
+// Global Brain Instance (3072 inputs for 32x32 RGB pixels)
+const brain = new NeuralNetwork(3072, 16, 1);
+
+/**
+ * 2. IMAGE HANDLING & PRE-PROCESSING
+ */
+const imgElement = document.getElementById('wound-img');
+const fileInput = document.getElementById('file-input');
+
+fileInput.addEventListener('change', (e) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+        imgElement.src = reader.result;
+        imgElement.style.display = "block";
+        document.getElementById('placeholder').style.display = "none";
     };
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+function getPixelData() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 32; canvas.height = 32; // Shrink for processing
+    ctx.drawImage(imgElement, 0, 0, 32, 32);
+    
+    const data = ctx.getImageData(0, 0, 32, 32).data;
+    let inputs = [];
+    for (let i = 0; i < data.length; i += 4) {
+        inputs.push(data[i]/255, data[i+1]/255, data[i+2]/255); // RGB values normalized
+    }
+    return inputs;
+}
+
+/**
+ * 3. USER INTERFACE LOGIC
+ */
+function runInference() {
+    if (!imgElement.src || imgElement.style.display === "none") return alert("Please upload a photo first.");
+    
+    const pixels = getPixelData();
+    const result = brain.predict(pixels).output[0];
+    updateStatus(result);
+}
+
+function teachAI(label) {
+    if (!imgElement.src || imgElement.style.display === "none") return alert("Upload a sample image to train on.");
+    
+    const pixels = getPixelData();
+    // Train the network 100 times on this specific image to "lock it in"
+    for(let i=0; i<100; i++) brain.train(pixels, [label]);
+    
+    alert(`This image is ${label === 1 ? 'INFECTED' : 'HEALTHY'}.`);
+}
+
+function updateStatus(val) {
+    const bar = document.getElementById('status-bar');
+    bar.style.display = "block";
+    const percent = (val * 100).toFixed(1);
+    
+    if (val > 0.5) {
+        bar.className = "warning";
+        bar.innerHTML = `⚠️ COMPLICATION DETECTED (${percent}%)<br><small>Redness/Irritation pattern found.</small>`;
+    } else {
+        bar.className = "healthy";
+        bar.innerHTML = `✅ RECOVERY NORMAL (${percent}%)<br><small>Wound appears to be healing well.</small>`;
+    }
+}
 </script>
+
+</body>
+</html>
